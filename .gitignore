@@ -1,6 +1,12 @@
 # macOS
 .DS_Store
 
+# R session history
+.Rhistory
+
+# Random downloads (journal portal proofs, etc.)
+submission/f86*.pdf
+
 # VCV Rack plugin build artifacts
 build/
 dist/
