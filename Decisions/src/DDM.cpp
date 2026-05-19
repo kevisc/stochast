@@ -440,10 +440,14 @@ struct DDMWidget : ModuleWidget {
 
     void appendContextMenu(Menu* menu) override {
         appendAboutMenu(menu, "DDM",
-            {"Ratcliff drift-diffusion model of decision-making.",
-             "A noisy evidence accumulator drifts until it hits an upper",
-             "or lower boundary — outputs choice, response time and trace."},
-            "Gauge (preset 'RT (ms)' for RT output), Frame (mean RT)");
+            {"Why is a harder discrimination slower? Ratcliff's drift-",
+             "diffusion model — the standard cognitive-psychology",
+             "account of two-alternative forced-choice. Evidence",
+             "accumulates noisily; the boundary it hits is the choice."},
+            "Gauge (preset 'RT (ms)'), Frame (mean RT).",
+            {"Sweep drift v from −1 to +1. At v ≈ 0: slow, ~50% accuracy.",
+             "At v = ±1: fast and accurate. Crank σ (noise) on top:",
+             "watch the same drift produce variable reaction times."});
     }
 };
 

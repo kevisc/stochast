@@ -1,5 +1,32 @@
 # Empiria changelog
 
+## 2.0.3 — 2026-05-19
+
+Pedagogy-framing release. No mechanism changes; rewrites the
+user-facing descriptions for the ten less-self-explanatory modules
+so they lead with the *question they answer* rather than the
+internal mathematics.
+
+- Decisions/{Prospect, Bandit, DDM}: plugin.json descriptions now
+  open with "Why do the same people buy insurance AND lottery
+  tickets?", "Explore vs. exploit — the foundational dilemma in
+  reinforcement learning.", and "Why is a harder discrimination
+  slower?" respectively, followed by the model formalism.
+- Polis/{Cascade, Discourse, Pareto, Dilemma, Diffusion}: leads
+  with "Why do some protests ignite and others fizzle?", "How do
+  echo chambers form?", "Where does wealth inequality come from?",
+  "Can cooperation evolve from selfish agents?", and "Why does
+  every viral product look like an S-curve?".
+- Space/{Schelling, Turing}: leads with "How can mild personal
+  preferences produce dramatic group segregation?" and "How does
+  a leopard get its spots?".
+- Right-click "What does this do?" menus for all ten modules gained
+  a new "Try this:" section: a 2-4 line concrete scenario the user
+  can dial in immediately to see the headline effect. Helper
+  signature in plugin.hpp extended across all five plugins to
+  accept the new field (optional, defaults to empty for the modules
+  whose names already convey their function — Methods primarily).
+
 ## 2.0.2 — 2026-05-19
 
 Pre-Library-submission audit release. No new modules; many

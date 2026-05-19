@@ -521,10 +521,14 @@ struct DilemmaWidget : ModuleWidget {
 
     void appendContextMenu(Menu* menu) override {
         appendAboutMenu(menu, "Dilemma",
-            {"Iterated 2x2 game (Prisoner's Dilemma, Stag Hunt, ...).",
-             "Strategies (TFT, ALLD, GRIM, ...) play repeatedly and",
-             "the payoff stream becomes a CV."},
-            "Tape (record payoff stream), Frame (mean payoff)");
+            {"Can cooperation evolve from selfish agents? Axelrod's",
+             "1980 tournament: yes, if the relationship repeats.",
+             "Tit-for-tat (TFT) wins a quiet world; noise breaks it."},
+            "Tape (record payoff stream), Frame (mean payoff).",
+            {"MIX = TFT-heavy population, NOISE = 0: cooperation",
+             "stable, mean payoff high. Crank NOISE to ~0.1: a misread",
+             "starts a defection feud between two TFTs and they can't",
+             "stop. Real-world cooperation is real but fragile."});
     }
 };
 

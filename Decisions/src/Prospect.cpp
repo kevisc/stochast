@@ -294,10 +294,14 @@ struct ProspectWidget : ModuleWidget {
 
     void appendContextMenu(Menu* menu) override {
         appendAboutMenu(menu, "Prospect",
-            {"Prospect-theory subjective value function with reference",
-             "dependence, loss aversion, and probability weighting.",
-             "Outputs subjective value v(x) and decision weight π(p)."},
-            "Gauge (preset 'Probability' or 'Percent'), Frame");
+            {"Why do the same people buy insurance AND lottery tickets?",
+             "Kahneman & Tversky's prospect theory: losses hurt ~2× as",
+             "much as equivalent gains feel good, and rare events get",
+             "psychologically overweighted. Both curves are live."},
+            "Gauge (preset 'Probability'/'Percent'), Frame.",
+            {"Default λ = 2.25. Drive X from 0 to −3 V and watch the",
+             "value function plunge twice as fast as it rises on +3.",
+             "Set objective probability to 0.001 — w(p) ~10× it."});
     }
 };
 

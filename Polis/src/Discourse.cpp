@@ -403,10 +403,15 @@ struct DiscourseWidget : ModuleWidget {
 
     void appendContextMenu(Menu* menu) override {
         appendAboutMenu(menu, "Discourse",
-            {"Deffuant bounded-confidence opinion dynamics.",
-             "N agents on a 1D opinion axis; pairs interact when",
-             "within tolerance ε. Watch consensus or polarisation emerge."},
-            "Seed (replicate runs), Frame (mean opinion variance)");
+            {"How do echo chambers form? Deffuant–Weisbuch bounded-",
+             "confidence: agents only update their opinion when they",
+             "meet someone already close to them. Live demonstration",
+             "of polarization vs. consensus."},
+            "Seed (replicate runs), Frame (mean opinion variance).",
+            {"ε = 0.4 (broad tolerance): population converges to a",
+             "single opinion. Reset, ε = 0.15: stable opinion clusters",
+             "that no longer interact. Real opinion dynamics live in",
+             "the middle. The cluster-count output shows it numerically."});
     }
 };
 

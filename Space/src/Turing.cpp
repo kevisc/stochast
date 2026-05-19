@@ -390,10 +390,15 @@ struct TuringWidget : ModuleWidget {
 
     void appendContextMenu(Menu* menu) override {
         appendAboutMenu(menu, "Turing",
-            {"Turing reaction-diffusion (Gray-Scott style) on a 2D grid.",
-             "Generates emergent patterns — spots, stripes, labyrinths —",
-             "from local chemical-kinetics rules."},
-            "Tape (record pattern's growth as CV), Seed (reproducible)");
+            {"How does a leopard get its spots? Alan Turing's 1952",
+             "reaction-diffusion: two chemicals u and v diffuse and",
+             "react on a 2D field; tiny perturbations grow into",
+             "stable patterns — animal coats, chemical clocks, dunes."},
+            "Tape (record pattern growth), Seed (reproducible).",
+            {"F = 0.040, k = 0.060 (default): spots emerge in ~15 sec.",
+             "Move F = 0.030 — stripes. F = 0.025, k = 0.055 — labyrinth.",
+             "F = 0.020, k = 0.050 — solitons drift across the field.",
+             "Same equations; different worlds."});
     }
 };
 

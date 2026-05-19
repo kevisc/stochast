@@ -437,10 +437,15 @@ struct ParetoWidget : ModuleWidget {
 
     void appendContextMenu(Menu* menu) override {
         appendAboutMenu(menu, "Pareto",
-            {"Boghosian-style affine wealth model. Simulates trading",
-             "between agents under a small bias and shows convergence",
-             "to a Pareto-tailed wealth distribution."},
-            "Frame (track inequality), Tape (record CDF)");
+            {"Where does wealth inequality come from? Even with fair",
+             "coin flips, pairwise random trading produces a winner-",
+             "take-all distribution. The yard-sale model: no bias, no",
+             "skill, no fraud — just trading."},
+            "Frame (track inequality), Tape (record CDF).",
+            {"Start equal, BIAS = 0, POOL = 0. Run 60 sec and watch the",
+             "Gini climb from 0 to ~0.9. Now add BIAS: concentration",
+             "accelerates. Add POOL: a stable inequality emerges instead",
+             "of full winner-take-all. The model is the argument."});
     }
 };
 

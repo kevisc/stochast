@@ -476,10 +476,15 @@ struct DiffusionWidget : ModuleWidget {
 
     void appendContextMenu(Menu* menu) override {
         appendAboutMenu(menu, "Diffusion",
-            {"Spreads a state through a network supplied on its left",
-             "expander. Adjacency comes from Network. Watch how seed",
-             "structure shapes the eventual reach and speed of diffusion."},
-            "Network (REQUIRED on the left), Cascade (threshold variant)");
+            {"Why does every viral product look like an S-curve?",
+             "Bass's diffusion model: spontaneous adoption (rate p)",
+             "ignites the curve; imitation (rate q) drives the middle;",
+             "saturation stalls it at the top."},
+            "Network (graph topology on left), Cascade (threshold), Tape.",
+            {"p = 0.01, q = 0.30, no Network — well-mixed S-curve in",
+             "~30 sec. Now patch a Network module to the left and",
+             "switch to BARABASI: hubs adopt early, the curve gets",
+             "steeper. Topology dominates timing on real social spread."});
     }
 };
 

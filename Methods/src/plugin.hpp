@@ -146,14 +146,21 @@ struct PanelLabels : Widget {
 inline void appendAboutMenu(Menu* menu,
                             const std::string& name,
                             const std::vector<std::string>& headlineLines,
-                            const std::string& companions) {
+                            const std::string& companions,
+                            const std::vector<std::string>& tryThisLines = {}) {
     menu->addChild(new MenuSeparator);
     menu->addChild(createSubmenuItem("What does this do?", "",
-        [name, headlineLines, companions](Menu* sub) {
+        [name, headlineLines, companions, tryThisLines](Menu* sub) {
             sub->addChild(createMenuLabel(name));
             sub->addChild(new MenuSeparator);
             for (const auto& line : headlineLines)
                 sub->addChild(createMenuLabel(line));
+            if (!tryThisLines.empty()) {
+                sub->addChild(new MenuSeparator);
+                sub->addChild(createMenuLabel("Try this:"));
+                for (const auto& line : tryThisLines)
+                    sub->addChild(createMenuLabel(line));
+            }
             sub->addChild(new MenuSeparator);
             sub->addChild(createMenuLabel("Companions:"));
             sub->addChild(createMenuLabel(companions));

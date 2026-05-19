@@ -405,10 +405,15 @@ struct SchellingWidget : ModuleWidget {
 
     void appendContextMenu(Menu* menu) override {
         appendAboutMenu(menu, "Schelling",
-            {"Schelling segregation model. Two groups on a 2D grid;",
-             "agents move when fewer than τ% of neighbours match.",
-             "Sharp segregation emerges from mild preferences."},
-            "Frame (track segregation index), Seed (reproducible)");
+            {"How can mild personal preferences produce dramatic",
+             "neighbourhood segregation? Schelling's 1971 model:",
+             "even agents content with being a 30% minority will,",
+             "collectively, sort into solid same-type blocks."},
+            "Frame (track segregation index), Seed (reproducible).",
+            {"θ = 0.30 (most agents OK as a minority): the random",
+             "mix segregates within ~60 sec. Crank θ to 0.50 — sharper.",
+             "θ = 0.70 — near-total separation. Macro-segregation does",
+             "NOT require strong individual prejudice."});
     }
 };
 

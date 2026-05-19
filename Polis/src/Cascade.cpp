@@ -476,10 +476,15 @@ struct CascadeWidget : ModuleWidget {
             &m->mode));
 
         appendAboutMenu(menu, "Cascade",
-            {"Granovetter-style threshold model of collective action.",
-             "Agents each have a personal threshold; an agent activates",
-             "when the share already active exceeds their threshold."},
-            "Diffusion (SIR-style variant), Tape (record fraction-active).");
+            {"Why do some protests ignite and others fizzle?",
+             "Granovetter's threshold model — agents each have a",
+             "personal threshold for how many *others* must be acting",
+             "first. One zealot can flip an otherwise inert group."},
+            "Diffusion (SIR-style variant), Tape (record fraction-active).",
+            {"Reset, set PRESSURE = 0. Raise PRESSURE slowly until a",
+             "cascade fires — find the median threshold of the group.",
+             "Shuffle the thresholds and try again: same median, totally",
+             "different ignition point. The lowest threshold wins."});
     }
 };
 

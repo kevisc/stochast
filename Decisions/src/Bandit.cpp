@@ -501,10 +501,14 @@ struct BanditWidget : ModuleWidget {
         add("Thompson sampling", Bandit::POLICY_THOMPSON);
 
         appendAboutMenu(menu, "Bandit",
-            {"K-armed bandit with UCB1, ε-greedy, and Thompson sampling",
-             "policies. Outputs arm pulls, cumulative regret, and the",
-             "current action selection."},
-            "Tape (record reward trajectory), Frame (mean reward)");
+            {"Explore vs. exploit — the foundational dilemma in RL.",
+             "A doctor between treatments, an A/B test deciding when",
+             "to stop, a casino with rigged slot machines. Three",
+             "classic policies on K arms with unknown true means."},
+            "Tape (record reward trajectory), Frame (mean reward).",
+            {"Start with ε-greedy, ε = 0.1: most pulls go to the",
+             "current best. Switch to UCB1: rare arms also get tried.",
+             "Switch to Thompson: belief-driven balance. Compare regret."});
     }
 };
 
