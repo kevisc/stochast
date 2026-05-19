@@ -126,16 +126,19 @@ struct Diffusion : Module {
         auto* msg = static_cast<EmpiriaNetworkMessage*>(leftExpander.consumerMessage);
         if (!msg) return nullptr;
         if (msg->magic != EmpiriaNetworkMessage::kMagic) return nullptr;
+        if (msg->version != EmpiriaNetworkMessage::kVersion) return nullptr;
         return msg;
     }
 
     // Forward the received adjacency to the right neighbour, so a chain like
     // Network | Diffusion | further-graph-aware-module all see the same graph.
+    // Only forwards to a whitelisted Empiria graph-participant module —
+    // writing into a foreign third-party expander buffer would corrupt it.
     void forwardAdjacencyRight() {
         const auto* in = tryGetNetworkMessage();
         if (!in) return;
-        if (!rightExpander.module ||
-            !rightExpander.module->leftExpander.producerMessage) return;
+        if (!isEmpiriaGraphParticipant(rightExpander.module)) return;
+        if (!rightExpander.module->leftExpander.producerMessage) return;
         auto* out = static_cast<EmpiriaNetworkMessage*>(
                         rightExpander.module->leftExpander.producerMessage);
         *out = *in;

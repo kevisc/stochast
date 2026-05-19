@@ -239,11 +239,39 @@ struct Schelling : Module {
     json_t* dataToJson() override {
         json_t* root = json_object();
         json_object_set_new(root, "seedVal", json_integer((json_int_t)seedVal));
+        // Pack the 24×24 grid as one int per row: 2 bits per cell encoding
+        // -1 (empty), 0 (type A), or 1 (type B). 24 cells × 2 bits = 48 bits.
+        json_t* gridArr = json_array();
+        for (int y = 0; y < kGrid; ++y) {
+            uint64_t row = 0;
+            for (int x = 0; x < kGrid; ++x) {
+                uint64_t code = (grid[y][x] < 0) ? 0ull
+                              : (grid[y][x] == 0) ? 1ull : 2ull;
+                row |= (code << (x * 2));
+            }
+            json_array_append_new(gridArr, json_integer((json_int_t)row));
+        }
+        json_object_set_new(root, "grid", gridArr);
         return root;
     }
     void dataFromJson(json_t* root) override {
         if (auto* j = json_object_get(root, "seedVal"))
             seedVal = (uint32_t)json_integer_value(j);
+        if (auto* gridArr = json_object_get(root, "grid")) {
+            if (json_is_array(gridArr)) {
+                size_t n = std::min((size_t)kGrid, json_array_size(gridArr));
+                for (size_t y = 0; y < n; ++y) {
+                    json_t* rowJ = json_array_get(gridArr, y);
+                    if (!json_is_integer(rowJ)) continue;
+                    uint64_t row = (uint64_t)json_integer_value(rowJ);
+                    for (int x = 0; x < kGrid; ++x) {
+                        uint64_t code = (row >> (x * 2)) & 0x3ull;
+                        grid[y][x] = (code == 0) ? -1
+                                   : (code == 1) ? 0 : 1;
+                    }
+                }
+            }
+        }
     }
 };
 

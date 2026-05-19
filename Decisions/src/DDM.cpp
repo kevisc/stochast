@@ -228,6 +228,25 @@ struct DDM : Module {
         float acc = (trials > 0) ? (float)correct / trials : 0.f;
         outputs[ACC_OUTPUT].setVoltage(clamp(acc, 0.f, 1.f) * 10.f);
     }
+
+    json_t* dataToJson() override {
+        json_t* root = json_object();
+        json_object_set_new(root, "seedVal", json_integer((json_int_t)seedVal));
+        json_object_set_new(root, "x", json_real(x));
+        json_object_set_new(root, "trialSteps", json_integer(trialSteps));
+        json_object_set_new(root, "trials",     json_integer(trials));
+        json_object_set_new(root, "correct",    json_integer(correct));
+        json_object_set_new(root, "lastRT",     json_real(lastRT));
+        return root;
+    }
+    void dataFromJson(json_t* root) override {
+        if (auto* j = json_object_get(root, "seedVal"))    seedVal    = (uint32_t)json_integer_value(j);
+        if (auto* j = json_object_get(root, "x"))          x          = (float)json_number_value(j);
+        if (auto* j = json_object_get(root, "trialSteps")) trialSteps = (int)json_integer_value(j);
+        if (auto* j = json_object_get(root, "trials"))     trials     = (int)json_integer_value(j);
+        if (auto* j = json_object_get(root, "correct"))    correct    = (int)json_integer_value(j);
+        if (auto* j = json_object_get(root, "lastRT"))     lastRT     = (float)json_number_value(j);
+    }
 };
 
 struct DDMView : LightWidget {

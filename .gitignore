@@ -5,6 +5,10 @@
 build/
 dist/
 *.vcvplugin
+*.dylib
+*.so
+*.dll
+*.d
 
 # LaTeX intermediate files
 *.aux

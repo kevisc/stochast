@@ -339,6 +339,46 @@ struct Outbreak : Module {
         outputs[PEAK_OUTPUT].setVoltage(gate ? 10.f : 0.f);
         lights[PEAK_LIGHT].setBrightness(gate ? 1.f : 0.f);
     }
+
+    json_t* dataToJson() override {
+        json_t* root = json_object();
+        json_object_set_new(root, "graphSeed", json_integer((json_int_t)graphSeed));
+        json_object_set_new(root, "maxIfraction", json_real(maxIfraction));
+        json_object_set_new(root, "peakAlreadyFired", json_boolean(peakAlreadyFired));
+        // Persist per-node S/I/R state — the graph itself regenerates
+        // deterministically from graphSeed + params on the next tick.
+        json_t* stateArr = json_array();
+        for (int i = 0; i < kMaxN; ++i)
+            json_array_append_new(stateArr, json_integer(state[i]));
+        json_object_set_new(root, "state", stateArr);
+        return root;
+    }
+    void dataFromJson(json_t* root) override {
+        if (auto* j = json_object_get(root, "graphSeed"))
+            graphSeed = (uint32_t)json_integer_value(j);
+        if (auto* j = json_object_get(root, "maxIfraction"))
+            maxIfraction = (float)json_number_value(j);
+        if (auto* j = json_object_get(root, "peakAlreadyFired"))
+            peakAlreadyFired = json_is_true(j);
+        if (auto* arr = json_object_get(root, "state")) {
+            if (json_is_array(arr)) {
+                size_t n = std::min((size_t)kMaxN, json_array_size(arr));
+                int s = 0, ii = 0, r = 0;
+                for (size_t i = 0; i < n; ++i) {
+                    json_t* v = json_array_get(arr, i);
+                    if (!json_is_integer(v)) continue;
+                    int val = (int)json_integer_value(v);
+                    state[i] = val;
+                    if ((int)i < N) {
+                        if (val == S) ++s;
+                        else if (val == I) ++ii;
+                        else if (val == R) ++r;
+                    }
+                }
+                countS = s; countI = ii; countR = r;
+            }
+        }
+    }
 };
 
 // ============================================================================
@@ -556,10 +596,12 @@ struct OutbreakWidget : ModuleWidget {
 
     void appendContextMenu(Menu* menu) override {
         appendAboutMenu(menu, "Outbreak",
-            {"Compartmental SIR / SEIR epidemic model. Tracks S / E /",
-             "I / R fractions over time with classical β γ σ parameters.",
-             "Optional network input randomises contact structure."},
-            "Network (contact graph), Seed, Tape (record the curve)");
+            {"Network SIR — infection spreads through an internally",
+             "generated graph (Watts-Strogatz / Erdős–Rényi / Barabási–",
+             "Albert) at rate β per infected neighbour per tick, with",
+             "recovery rate γ. Tracks S / I / R fractions over time and",
+             "displays the network coloured by per-node state."},
+            "Companions — Polis: Network; Methods: Seed, Tape.");
     }
 };
 

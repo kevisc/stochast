@@ -432,16 +432,17 @@ struct Network : Module {
         outputs[JUMP_OUTPUT].setVoltage(quantizedJump());
 
         // Publish adjacency + walker state into the right neighbour's left
-        // expander buffer. The consumer (currently Diffusion) is responsible
-        // for allocating its own leftExpander buffers — a push-receive
-        // convention used by most VCV Rack expanders. We write the message,
-        // ask the engine to flip the consumer's buffers, and the consumer
-        // reads from its own leftExpander.consumerMessage next tick.
-        if (rightExpander.module &&
+        // expander buffer. The consumer (currently Diffusion or Epi/Outbreak)
+        // is responsible for allocating its own leftExpander buffers — a
+        // push-receive convention used by most VCV Rack expanders. We only
+        // write if the neighbour is a whitelisted Empiria graph-participant
+        // module; otherwise we would corrupt a foreign module's buffer.
+        if (isEmpiriaGraphParticipant(rightExpander.module) &&
             rightExpander.module->leftExpander.producerMessage) {
             auto* msg = static_cast<EmpiriaNetworkMessage*>(
                             rightExpander.module->leftExpander.producerMessage);
-            msg->magic = EmpiriaNetworkMessage::kMagic;
+            msg->magic   = EmpiriaNetworkMessage::kMagic;
+            msg->version = EmpiriaNetworkMessage::kVersion;
             msg->N = N;
             for (int i = 0; i < EmpiriaNetworkMessage::kMaxN; ++i) {
                 for (int j = 0; j < EmpiriaNetworkMessage::kMaxN; ++j)

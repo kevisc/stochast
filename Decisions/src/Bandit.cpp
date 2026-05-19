@@ -229,6 +229,21 @@ struct Bandit : Module {
         json_t* root = json_object();
         json_object_set_new(root, "seedVal", json_integer((json_int_t)seedVal));
         json_object_set_new(root, "policy",  json_integer(policy));
+        json_object_set_new(root, "totalPulls", json_integer(totalPulls));
+        json_object_set_new(root, "bestArm",    json_integer(bestArm));
+        json_object_set_new(root, "bestPulls",  json_integer(bestPulls));
+        json_object_set_new(root, "cumRegret",  json_real(cumRegret));
+        json_t* muArr  = json_array();
+        json_t* sumArr = json_array();
+        json_t* cntArr = json_array();
+        for (int i = 0; i < kMaxK; ++i) {
+            json_array_append_new(muArr,  json_real(mu[i]));
+            json_array_append_new(sumArr, json_real(sumR[i]));
+            json_array_append_new(cntArr, json_integer(count[i]));
+        }
+        json_object_set_new(root, "mu",    muArr);
+        json_object_set_new(root, "sumR",  sumArr);
+        json_object_set_new(root, "count", cntArr);
         return root;
     }
     void dataFromJson(json_t* root) override {
@@ -236,6 +251,22 @@ struct Bandit : Module {
             seedVal = (uint32_t)json_integer_value(j);
         if (auto* j = json_object_get(root, "policy"))
             policy = clamp((int)json_integer_value(j), 0, NUM_POLICIES - 1);
+        if (auto* j = json_object_get(root, "totalPulls")) totalPulls = (int)json_integer_value(j);
+        if (auto* j = json_object_get(root, "bestArm"))    bestArm    = (int)json_integer_value(j);
+        if (auto* j = json_object_get(root, "bestPulls"))  bestPulls  = (int)json_integer_value(j);
+        if (auto* j = json_object_get(root, "cumRegret"))  cumRegret  = json_number_value(j);
+        auto loadArr = [](json_t* arr, auto& dst, int maxN) {
+            if (!arr || !json_is_array(arr)) return;
+            size_t n = std::min((size_t)maxN, json_array_size(arr));
+            for (size_t i = 0; i < n; ++i) {
+                json_t* v = json_array_get(arr, i);
+                if (json_is_number(v)) dst[i] =
+                    static_cast<typename std::remove_reference<decltype(dst[i])>::type>(json_number_value(v));
+            }
+        };
+        loadArr(json_object_get(root, "mu"),    mu,    kMaxK);
+        loadArr(json_object_get(root, "sumR"),  sumR,  kMaxK);
+        loadArr(json_object_get(root, "count"), count, kMaxK);
     }
 };
 

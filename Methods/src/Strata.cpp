@@ -19,11 +19,19 @@ struct Strata : Module {
     enum OutputId { TREND_OUTPUT, SEASONAL_OUTPUT, RESIDUAL_OUTPUT, NUM_OUTPUTS };
 
     static constexpr float kMaxPeriodSec = 4.0f;
+    static constexpr float kMaxSampleRate = 192000.f;
     static constexpr int   SCOPE_BUF = 256;
+    static constexpr int   kMaxTableSize =
+        (int)(kMaxPeriodSec * kMaxSampleRate) + 16;
 
     // DSP state
     float trendY = 0.f;
+    // Two heap buffers, both reserved at construction to the max size that
+    // any period setting × any sample-rate can demand. process() then uses
+    // .resize() (no realloc since capacity == max) + .swap() so the audio
+    // thread never allocates.
     std::vector<float> seasonalTable;
+    std::vector<float> seasonalScratch;
     int phase = 0;
     int currentTableSize = 0;
 
@@ -45,6 +53,8 @@ struct Strata : Module {
         configOutput(TREND_OUTPUT, "Trend");
         configOutput(SEASONAL_OUTPUT, "Seasonal");
         configOutput(RESIDUAL_OUTPUT, "Residual");
+        seasonalTable.reserve(kMaxTableSize);
+        seasonalScratch.reserve(kMaxTableSize);
         seasonalTable.assign(1, 0.f);
         currentTableSize = 1;
     }
@@ -78,13 +88,17 @@ struct Strata : Module {
         pSec = clamp(pSec, 0.005f, kMaxPeriodSec);
 
         int newSize = std::max(1, (int)std::round(pSec * args.sampleRate));
+        newSize = std::min(newSize, kMaxTableSize);  // safety
         if (newSize != currentTableSize) {
-            std::vector<float> next(newSize, 0.f);
+            // Resize the scratch buffer (no realloc — kMaxTableSize was
+            // reserved in the constructor), resample from the active table
+            // into scratch, then swap. Both buffers retain max capacity.
+            seasonalScratch.resize(newSize);
             for (int i = 0; i < newSize; ++i) {
                 int src = (int)((float)i / newSize * currentTableSize);
-                next[i] = seasonalTable[src];
+                seasonalScratch[i] = seasonalTable[src];
             }
-            seasonalTable = std::move(next);
+            seasonalTable.swap(seasonalScratch);
             phase = phase % newSize;
             currentTableSize = newSize;
         }

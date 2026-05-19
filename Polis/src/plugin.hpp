@@ -28,14 +28,37 @@ extern Model* modelNetwork;
 // (Polis, Epi). Keep this declaration in sync across plugin.hpp files.
 // ---------------------------------------------------------------------------
 struct EmpiriaNetworkMessage {
-    static constexpr uint32_t kMagic = 0xE1A1D1A1u;
-    static constexpr int      kMaxN  = 16;
+    static constexpr uint32_t kMagic   = 0xE1A1D1A1u;
+    static constexpr uint16_t kVersion = 1;
+    static constexpr int      kMaxN    = 16;
 
-    uint32_t magic = 0;          // = kMagic when the producer has populated this
-    int      N     = 0;          // active node count, 1..kMaxN
-    bool     adj[kMaxN][kMaxN]{};// symmetric adjacency, no self-loops
-    float    nodeState[kMaxN]{}; // optional per-node state (e.g. S/I/R as 0/5/10 V)
+    uint32_t magic   = 0;          // = kMagic when the producer has populated this
+    uint16_t version = 0;          // = kVersion; bump if layout changes
+    uint16_t _pad    = 0;
+    int      N       = 0;          // active node count, 1..kMaxN
+    bool     adj[kMaxN][kMaxN]{};  // symmetric adjacency, no self-loops
+    float    nodeState[kMaxN]{};   // optional per-node state (e.g. S/I/R as 0/5/10 V)
 };
+
+// Whitelist check: is this right-neighbour an Empiria module that participates
+// in the adjacency-on-expander protocol? Senders MUST check this before
+// writing into the neighbour's leftExpander.producerMessage — otherwise an
+// unrelated third-party module that happens to allocate a left-expander buffer
+// for its own protocol would have ~300 bytes overwritten.
+// Keep the whitelist in sync across Polis/ and Epi/ plugin.hpp files.
+inline bool isEmpiriaGraphParticipant(Module* m) {
+    if (!m || !m->model || !m->model->plugin) return false;
+    const std::string& pluginSlug = m->model->plugin->slug;
+    const std::string& modelSlug  = m->model->slug;
+    if (pluginSlug == "SHLabs-Polis") {
+        return modelSlug == "Diffusion"
+            || modelSlug == "Network";   // chain forwarding
+    }
+    if (pluginSlug == "SHLabs-Epi") {
+        return modelSlug == "Outbreak";
+    }
+    return false;
+}
 
 // Renders the module title across the header strip via NanoVG. Used in place
 // of SVG <text> in the panel, which VCV Rack's NanoSVG parser does not render.

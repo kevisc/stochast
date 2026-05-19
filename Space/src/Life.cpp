@@ -214,12 +214,37 @@ struct Life : Module {
         json_object_set_new(root, "birthMask",   json_integer(birthMask));
         json_object_set_new(root, "surviveMask", json_integer(surviveMask));
         json_object_set_new(root, "seedVal",     json_integer((json_int_t)seedVal));
+        json_object_set_new(root, "aliveCount",  json_integer(aliveCount));
+        json_object_set_new(root, "generation",  json_integer(generation));
+        // Pack the 24×24 grid into one int per row (lower 24 bits = cells).
+        json_t* gridArr = json_array();
+        for (int y = 0; y < kGrid; ++y) {
+            uint32_t row = 0;
+            for (int x = 0; x < kGrid; ++x)
+                if (grid[y][x]) row |= (1u << x);
+            json_array_append_new(gridArr, json_integer((json_int_t)row));
+        }
+        json_object_set_new(root, "grid", gridArr);
         return root;
     }
     void dataFromJson(json_t* root) override {
         if (auto* j = json_object_get(root, "birthMask"))   birthMask   = json_integer_value(j);
         if (auto* j = json_object_get(root, "surviveMask")) surviveMask = json_integer_value(j);
         if (auto* j = json_object_get(root, "seedVal"))     seedVal     = (uint32_t)json_integer_value(j);
+        if (auto* j = json_object_get(root, "aliveCount"))  aliveCount  = (int)json_integer_value(j);
+        if (auto* j = json_object_get(root, "generation"))  generation  = (int)json_integer_value(j);
+        if (auto* gridArr = json_object_get(root, "grid")) {
+            if (json_is_array(gridArr)) {
+                size_t n = std::min((size_t)kGrid, json_array_size(gridArr));
+                for (size_t y = 0; y < n; ++y) {
+                    json_t* rowJ = json_array_get(gridArr, y);
+                    if (!json_is_integer(rowJ)) continue;
+                    uint32_t row = (uint32_t)json_integer_value(rowJ);
+                    for (int x = 0; x < kGrid; ++x)
+                        grid[y][x] = (row >> x) & 1u;
+                }
+            }
+        }
     }
 };
 

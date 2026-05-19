@@ -17,7 +17,7 @@
       "slug": "Outbreak",
       "name": "Outbreak",
       "description": "Network SIR — infection spreads through an internally generated graph (Watts-Strogatz, Erdős–Rényi, or Barabási–Albert) at rate β per infected neighbour per tick, with recovery rate γ. Network topology dramatically changes outbreak dynamics: small-world graphs spread fast via shortcuts; preferential-attachment hubs become superspreaders. Visualization shows the network coloured by S / I / R state plus a small S/I/R trajectory.",
-      "tags": ["Random", "Logic", "Utility", "Polyphonic"]
+      "tags": ["Random", "Utility", "Polyphonic"]
     }
   ]
 }

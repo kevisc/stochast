@@ -64,6 +64,7 @@ struct Turing : Module {
     float oscPulse = 0.f;
 
     float internalPhase = 0.f;
+    int statTimer = 0;        // per-instance — was a function-local static
     dsp::SchmittTrigger clockTrig, resetTrig, shuffleBtn;
     std::mt19937 rng;
     uint32_t seedVal = 0x4ABCDEF1u;
@@ -176,7 +177,20 @@ struct Turing : Module {
 
         bool tick = false;
         if (inputs[CLOCK_INPUT].isConnected()) {
-            if (clockTrig.process(inputs[CLOCK_INPUT].getVoltage(), 0.1f, 1.f)) tick = true;
+            // Cap substeps per process() call so an audio-rate clock
+            // (each tick = up to ~110M cell ops/s on the audio thread)
+            // can't glitch playback. We absorb at most kMaxSubstepsPerCall
+            // ticks per audio sample; extra triggers within the same
+            // sample are dropped.
+            constexpr int kMaxSubstepsPerCall = 1;
+            int taken = 0;
+            while (taken < kMaxSubstepsPerCall &&
+                   clockTrig.process(inputs[CLOCK_INPUT].getVoltage(), 0.1f, 1.f)) {
+                tick = true;  ++taken;
+            }
+            // SchmittTrigger.process returns true at most once per call in
+            // practice; the while-loop is defensive and reduces to a single
+            // tick in normal usage.
         } else {
             internalPhase += args.sampleTime * kInternalHz;
             if (internalPhase >= 1.f) { internalPhase -= 1.f; tick = true; }
@@ -184,7 +198,6 @@ struct Turing : Module {
         if (tick) {
             substep();
             // Stat-recompute every ~kGrid steps to save CPU
-            static int statTimer = 0;
             if (++statTimer >= 12) { statTimer = 0; recomputeStats(); }
         }
 
@@ -199,11 +212,35 @@ struct Turing : Module {
     json_t* dataToJson() override {
         json_t* root = json_object();
         json_object_set_new(root, "seedVal", json_integer((json_int_t)seedVal));
+        // Persist the u and v concentration grids. 48×48×2 = 4608 floats per
+        // grid; the JSON is ~50KB per Turing instance which is the price of
+        // resumable reaction-diffusion patterns. Stored as flat arrays.
+        json_t* uArr = json_array();
+        json_t* vArr = json_array();
+        for (int y = 0; y < kGrid; ++y)
+            for (int x = 0; x < kGrid; ++x) {
+                json_array_append_new(uArr, json_real(u[y][x]));
+                json_array_append_new(vArr, json_real(v[y][x]));
+            }
+        json_object_set_new(root, "u", uArr);
+        json_object_set_new(root, "v", vArr);
         return root;
     }
     void dataFromJson(json_t* root) override {
         if (auto* j = json_object_get(root, "seedVal"))
             seedVal = (uint32_t)json_integer_value(j);
+        auto loadFlat = [](json_t* arr, std::array<std::array<float, kGrid>, kGrid>& dst) {
+            if (!arr || !json_is_array(arr)) return;
+            size_t idx = 0;
+            for (int y = 0; y < kGrid; ++y)
+                for (int x = 0; x < kGrid; ++x, ++idx) {
+                    if (idx >= json_array_size(arr)) return;
+                    json_t* v = json_array_get(arr, idx);
+                    if (json_is_number(v)) dst[y][x] = (float)json_number_value(v);
+                }
+        };
+        loadFlat(json_object_get(root, "u"), u);
+        loadFlat(json_object_get(root, "v"), v);
     }
 };
 

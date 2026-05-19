@@ -169,6 +169,11 @@ struct Cohort : Module {
                 if (json_is_number(v)) centres[i] = (float)json_number_value(v);
             }
         }
+        // Sync activeK / prevActiveK with the just-restored K_PARAM so the
+        // first process() tick after load does not see activeK != prevActiveK
+        // and overwrite the centres we just loaded.
+        activeK = clamp((int)std::round(params[K_PARAM].getValue()), 2, kMaxK);
+        prevActiveK = activeK;
     }
 };
 
