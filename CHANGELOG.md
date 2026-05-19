@@ -7,9 +7,9 @@ five plugins under the SHLabs brand:
 
 - **Polis** (6 modules): Cascade, Diffusion, Dilemma, Discourse,
   Network, Pareto — social and economic dynamics.
-- **Methods** (14 modules): Boot, Code, Cohort, Factor, Frame,
-  Gauge, Lag, Regress, Sample, Seed, Strata, Tab, Tape, Test —
-  the statistical analysis layer.
+- **Methods** (15 modules): Boot, Code, Cohort, Factor, Frame,
+  Gauge, Lag, Quantity, Regress, Sample, Seed, Strata, Tab, Tape,
+  Test — the statistical analysis layer.
 - **Epi** (1 module): Outbreak — compartmental SIR / SEIR.
 - **Space** (3 modules): Life, Schelling, Turing — spatial CA.
 - **Decisions** (3 modules): Bandit, DDM, Prospect — behavioural
