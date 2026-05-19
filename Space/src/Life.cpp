@@ -196,10 +196,14 @@ struct Life : Module {
         outputs[OSC_OUTPUT].setVoltage(oscPulse > 0.f ? 10.f : 0.f);
         lights[OSC_LIGHT].setBrightness(oscPulse > 0.f ? 1.f : 0.f);
 
-        // Per-row live counts on 16 of the 24 rows (every 1.5 rows)
+        // Per-row live counts on 16 of the 24 rows, evenly spaced. The
+        // earlier formula y = c*(kGrid-1)/15 mapped channel 15 to row 23
+        // but skipped row 22; this maps channels 0..15 to rows 0,1,3,4,6,7,
+        // 9,10,12,13,15,16,18,19,21,22 — uniformly stepped by 1.5 modulo
+        // the integer-truncation pattern.
         outputs[ROW_OUTPUT].setChannels(16);
         for (int c = 0; c < 16; ++c) {
-            int y = (c * (kGrid - 1)) / 15;
+            int y = (c * kGrid) / 16;
             int rowAlive = 0;
             for (int x = 0; x < kGrid; ++x) rowAlive += grid[y][x];
             outputs[ROW_OUTPUT].setVoltage(10.f * (float)rowAlive / kGrid, c);

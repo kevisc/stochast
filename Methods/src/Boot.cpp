@@ -80,6 +80,15 @@ struct Boot : Module {
     float bcaZ0 = 0.f;       // bias correction Φ⁻¹(#{θ̂*<θ̂}/B)
     float bcaAccel = 0.f;    // acceleration from jackknife skewness
 
+    // Pre-allocated scratch buffers for the bootstrap pipeline. All sized
+    // to kMaxBuf so performBootstrap() / statOn() never allocate on the
+    // audio thread.
+    std::array<float, kMaxBuf> origBuf{};
+    std::array<float, kMaxBuf> resampleBuf{};
+    std::array<float, kMaxBuf> jackBuf{};
+    std::array<float, kMaxBuf> looBuf{};
+    std::array<float, kMaxBuf> sortScratch{};
+
     std::mt19937 rng{0xB0075u};
     dsp::SchmittTrigger clockTrig, resetTrig, resampleTrig, shuffleBtn;
 
@@ -201,31 +210,33 @@ struct Boot : Module {
         return x;
     }
 
-    static float statOn(const std::vector<float>& v, int statKind) {
-        int n = (int)v.size();
+    // Compute the requested statistic on the first n entries of `v`.
+    // Member function (not static) so the median's sort can use the
+    // pre-allocated `sortScratch` buffer instead of allocating a copy.
+    float statOn(const float* v, int n, int statKind) {
         if (n <= 0) return 0.f;
         switch (statKind) {
             case STAT_MEAN: {
                 double s = 0.0;
-                for (float x : v) s += x;
+                for (int i = 0; i < n; ++i) s += v[i];
                 return (float)(s / n);
             }
             case STAT_MEDIAN: {
-                std::vector<float> c = v;
-                std::sort(c.begin(), c.end());
-                if (n % 2 == 1) return c[n / 2];
-                return 0.5f * (c[n / 2 - 1] + c[n / 2]);
+                std::copy(v, v + n, sortScratch.begin());
+                std::sort(sortScratch.begin(), sortScratch.begin() + n);
+                if (n % 2 == 1) return sortScratch[n / 2];
+                return 0.5f * (sortScratch[n / 2 - 1] + sortScratch[n / 2]);
             }
             case STAT_SD: {
                 if (n < 2) return 0.f;
-                double m = 0; for (float x : v) m += x; m /= n;
-                double ss = 0; for (float x : v) { double d = x - m; ss += d * d; }
+                double m = 0; for (int i = 0; i < n; ++i) m += v[i]; m /= n;
+                double ss = 0; for (int i = 0; i < n; ++i) { double d = v[i] - m; ss += d * d; }
                 return (float)std::sqrt(ss / (n - 1));
             }
             case STAT_VAR: {
                 if (n < 2) return 0.f;
-                double m = 0; for (float x : v) m += x; m /= n;
-                double ss = 0; for (float x : v) { double d = x - m; ss += d * d; }
+                double m = 0; for (int i = 0; i < n; ++i) m += v[i]; m /= n;
+                double ss = 0; for (int i = 0; i < n; ++i) { double d = v[i] - m; ss += d * d; }
                 return (float)(ss / (n - 1));
             }
         }
@@ -248,19 +259,17 @@ struct Boot : Module {
         int B = currentB();
         int statKind = currentStat();
 
-        // Gather original sample
-        std::vector<float> orig(n);
+        // Gather original sample into pre-allocated scratch — no heap alloc.
         for (int i = 0; i < n; ++i) {
             int idx = (writeIdx - 1 - i + kMaxBuf) % kMaxBuf;
-            orig[i] = samples[idx];
+            origBuf[i] = samples[idx];
         }
-        originalEstimate = statOn(orig, statKind);
+        originalEstimate = statOn(origBuf.data(), n, statKind);
 
         std::uniform_int_distribution<int> uid(0, n - 1);
-        std::vector<float> resample(n);
         for (int b = 0; b < B; ++b) {
-            for (int i = 0; i < n; ++i) resample[i] = orig[uid(rng)];
-            bootStats[b] = statOn(resample, statKind);
+            for (int i = 0; i < n; ++i) resampleBuf[i] = origBuf[uid(rng)];
+            bootStats[b] = statOn(resampleBuf.data(), n, statKind);
         }
         activeBoots = B;
 
@@ -310,20 +319,18 @@ struct Boot : Module {
         // --- Acceleration â from leave-one-out jackknife ---
         double accel = 0.0;
         if (n >= 3) {
-            std::vector<float> jack(n);
-            std::vector<float> loo;
-            loo.reserve(n - 1);
             for (int i = 0; i < n; ++i) {
-                loo.clear();
-                for (int j = 0; j < n; ++j) if (j != i) loo.push_back(orig[j]);
-                jack[i] = statOn(loo, statKind);
+                int looLen = 0;
+                for (int j = 0; j < n; ++j)
+                    if (j != i) looBuf[looLen++] = origBuf[j];
+                jackBuf[i] = statOn(looBuf.data(), looLen, statKind);
             }
             double jmean = 0.0;
-            for (float x : jack) jmean += x;
+            for (int i = 0; i < n; ++i) jmean += jackBuf[i];
             jmean /= n;
             double num = 0.0, den = 0.0;
-            for (float x : jack) {
-                double diff = jmean - x;       // sign convention: θ̂_(·) − θ̂_(i)
+            for (int i = 0; i < n; ++i) {
+                double diff = jmean - jackBuf[i]; // sign: θ̂_(·) − θ̂_(i)
                 num += diff * diff * diff;
                 den += diff * diff;
             }

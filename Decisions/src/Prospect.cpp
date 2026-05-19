@@ -135,8 +135,9 @@ struct ProspectView : LightWidget {
 
         // --- Value function on top half ---
         float x0 = pad, y0 = pad;
-        // axes (x: -5..5; y: -10..10 for value units)
-        auto mapX = [&](float xv) { return x0 + W * (xv + 5.f) / 10.f; };
+        // axes (x: -10..10 to match configInput's "±10 V = ±10 units"
+        // promise; y: -10..10 for value units)
+        auto mapX = [&](float xv) { return x0 + W * (xv + 10.f) / 20.f; };
         auto mapY = [&](float v)  { return y0 + halfH * (1.f - (v + 10.f) / 20.f); };
 
         // Reference axes
@@ -151,8 +152,8 @@ struct ProspectView : LightWidget {
         nvgStrokeColor(vg, nvgRGBA(120, 130, 150, 100));
         nvgStrokeWidth(vg, 0.4f);
         nvgBeginPath(vg);
-        nvgMoveTo(vg, mapX(-5.f), mapY(-5.f));
-        nvgLineTo(vg, mapX( 5.f), mapY( 5.f));
+        nvgMoveTo(vg, mapX(-10.f), mapY(-10.f));
+        nvgLineTo(vg, mapX( 10.f), mapY( 10.f));
         nvgStroke(vg);
 
         // Curve
@@ -160,7 +161,7 @@ struct ProspectView : LightWidget {
         bool first = true;
         const int N = 100;
         for (int i = 0; i <= N; ++i) {
-            float xv = -5.f + 10.f * i / N;
+            float xv = -10.f + 20.f * i / N;
             float v  = module->utility(xv);
             float px = mapX(xv), py = mapY(clamp(v, -10.f, 10.f));
             if (first) { nvgMoveTo(vg, px, py); first = false; }
@@ -171,7 +172,7 @@ struct ProspectView : LightWidget {
         nvgStroke(vg);
 
         // Operating point
-        float xObs = clamp(module->inputs[Prospect::X_INPUT].getVoltage(), -5.f, 5.f);
+        float xObs = clamp(module->inputs[Prospect::X_INPUT].getVoltage(), -10.f, 10.f);
         float uObs = module->utility(xObs);
         nvgBeginPath(vg);
         nvgCircle(vg, mapX(xObs), mapY(clamp(uObs, -10.f, 10.f)), 2.4f);

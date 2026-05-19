@@ -11,16 +11,34 @@ extern Plugin* pluginInstance;
 extern Model* modelOutbreak;
 
 // Adjacency-on-expander protocol. MUST match the definition in Polis's
-// plugin.hpp — keep both copies in sync.
+// plugin.hpp — keep both copies in sync (struct layout, kMagic, kVersion).
 struct EmpiriaNetworkMessage {
-    static constexpr uint32_t kMagic = 0xE1A1D1A1u;
-    static constexpr int      kMaxN  = 16;
+    static constexpr uint32_t kMagic   = 0xE1A1D1A1u;
+    static constexpr uint16_t kVersion = 1;
+    static constexpr int      kMaxN    = 16;
 
-    uint32_t magic = 0;
-    int      N     = 0;
+    uint32_t magic   = 0;
+    uint16_t version = 0;
+    uint16_t _pad    = 0;
+    int      N       = 0;
     bool     adj[kMaxN][kMaxN]{};
     float    nodeState[kMaxN]{};
 };
+
+// Whitelist check: see Polis/plugin.hpp for full doc. Keep in sync.
+inline bool isEmpiriaGraphParticipant(Module* m) {
+    if (!m || !m->model || !m->model->plugin) return false;
+    const std::string& pluginSlug = m->model->plugin->slug;
+    const std::string& modelSlug  = m->model->slug;
+    if (pluginSlug == "SHLabs-Polis") {
+        return modelSlug == "Diffusion"
+            || modelSlug == "Network";
+    }
+    if (pluginSlug == "SHLabs-Epi") {
+        return modelSlug == "Outbreak";
+    }
+    return false;
+}
 
 // Renders the module title across the header strip via NanoVG. Used in place
 // of SVG <text> in the panel, which VCV Rack's NanoSVG parser does not render.

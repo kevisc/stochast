@@ -83,8 +83,15 @@ struct Outbreak : Module {
 
     dsp::SchmittTrigger clockTrig, resetTrig, seedBtn;
 
+    // Adjacency-on-expander consumer: when a Polis/Network module sits to
+    // the left, we read its published adjacency instead of generating our
+    // own internal graph each tick.
+    EmpiriaNetworkMessage leftMsgA, leftMsgB;
+
     Outbreak() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
+        leftExpander.producerMessage = &leftMsgA;
+        leftExpander.consumerMessage = &leftMsgB;
         configParam(POPULATION_PARAM, 2.f, (float)kMaxN, 12.f, "Population N");
         paramQuantities[POPULATION_PARAM]->snapEnabled = true;
         configParam(BETA_PARAM,  0.f, 1.f, 0.25f, "Per-contact infection rate β");
@@ -192,7 +199,27 @@ struct Outbreak : Module {
     int   currentK()    { return clamp((int)std::round(params[K_PARAM].getValue()), 1, kMaxN - 1); }
     float currentBetaNet() { return clamp(params[BETA_NET_PARAM].getValue(), 0.f, 1.f); }
 
+    // Returns a pointer to an upstream Polis/Network adjacency message if
+    // one is currently published from the left expander; nullptr otherwise.
+    const EmpiriaNetworkMessage* tryGetNetworkMessage() const {
+        auto* msg = static_cast<EmpiriaNetworkMessage*>(leftExpander.consumerMessage);
+        if (!msg) return nullptr;
+        if (msg->magic != EmpiriaNetworkMessage::kMagic) return nullptr;
+        if (msg->version != EmpiriaNetworkMessage::kVersion) return nullptr;
+        return msg;
+    }
+
     void regenerateGraph() {
+        // If a Network module to the left is publishing adjacency, adopt it
+        // (the user explicitly wired the graph from upstream). Otherwise
+        // fall back to the internal RING/ERDOS/BARA generator.
+        if (const auto* net = tryGetNetworkMessage()) {
+            int M = std::min(N, net->N);
+            for (int i = 0; i < kMaxN; ++i)
+                for (int j = 0; j < kMaxN; ++j)
+                    adj[i][j] = (i < M && j < M) ? net->adj[i][j] : false;
+            return;
+        }
         rng.seed(graphSeed);
         int t = currentType();
         if      (t == TYPE_RING)  buildWS(currentK(), currentBetaNet());
@@ -293,10 +320,15 @@ struct Outbreak : Module {
         int n = clamp((int)std::round(params[POPULATION_PARAM].getValue()), 2, kMaxN);
         if (n != N) { N = n; resetEpidemic(); regenerateGraph(); }
 
-        // Graph re-gen on parameter change
+        // Graph re-gen on parameter change. Also re-pull whenever an
+        // upstream Network message is present (cheap copy; ensures live
+        // graph changes propagate without the user needing to twiddle a
+        // knob).
         int k = currentK(), tp = currentType();
         float bN = currentBetaNet();
-        if (N != prevPop || k != prevK || tp != prevType ||
+        bool externalGraph = tryGetNetworkMessage() != nullptr;
+        if (externalGraph ||
+            N != prevPop || k != prevK || tp != prevType ||
             std::fabs(bN - prevBetaNet) > 1e-4f || graphSeed != prevGraphSeed) {
             regenerateGraph();
             prevPop = N; prevK = k; prevType = tp; prevBetaNet = bN; prevGraphSeed = graphSeed;
@@ -442,13 +474,18 @@ struct OutbreakView : LightWidget {
                 nvgStroke(vg);
             }
 
-        // Nodes, coloured by state
+        // Nodes, coloured by state and sized by degree so hubs are visible
+        // (Barabási–Albert produces hubs that become superspreaders).
+        // Radius = 2.0 + 0.5*sqrt(degree); clamped to [2, 5].
         for (int i = 0; i < N; ++i) {
             NVGcolor c = (module->state[i] == Outbreak::S) ? nvgRGB( 90, 165, 230)
                         : (module->state[i] == Outbreak::I) ? nvgRGB(245,  90,  90)
                                                             : nvgRGB(120, 200, 140);
+            int deg = 0;
+            for (int j = 0; j < N; ++j) if (module->adj[i][j]) ++deg;
+            float r = clamp(2.0f + 0.5f * std::sqrt((float)deg), 2.f, 5.f);
             nvgBeginPath(vg);
-            nvgCircle(vg, nx[i], ny[i], 3.5f);
+            nvgCircle(vg, nx[i], ny[i], r);
             nvgFillColor(vg, c);
             nvgFill(vg);
         }

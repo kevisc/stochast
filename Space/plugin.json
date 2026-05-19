@@ -29,7 +29,7 @@
       "slug": "Turing",
       "name": "Turing",
       "description": "Gray-Scott reaction-diffusion on a 48×48 grid. Two chemicals u and v diffuse and react; u + 2v → 3v (autocatalysis), v → P (decay). Feed rate F and kill rate k control the steady state. Different (F, k) produce spots, stripes, labyrinth, or solitons — Turing's mechanism for biological pattern formation. Outputs mean u, mean v, pattern variance, and an oscillation gate.",
-      "tags": ["Random", "Logic", "Utility", "Polyphonic"]
+      "tags": ["Random", "Logic", "Utility"]
     }
   ]
 }

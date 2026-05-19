@@ -71,6 +71,10 @@ struct Lag : Module {
     bool isWhite = false;
     float ciBand = 0.f; // 1.96 / sqrt(n) — drawn in the viz
 
+    // Scratch buffer for autocorrelation computation. Sized to kMaxBuf so
+    // computeAutocorrelations() never allocates on the audio thread.
+    std::array<float, kMaxBuf> acfScratch{};
+
     dsp::SchmittTrigger clockTrig, resetTrig, shuffleBtn;
 
     Lag() {
@@ -135,36 +139,36 @@ struct Lag : Module {
         int n = effectiveN();
         if (n < 4) { acf.fill(0.f); phi = 0.f; seriesVar = 0.f; residVar = 0.f; isWhite = false; ciBand = 0.f; return; }
 
-        // Gather buffer in chronological order (oldest first)
-        std::vector<float> data(n);
+        // Gather buffer in chronological order (oldest first) into the
+        // pre-allocated scratch — no heap alloc on audio thread.
         for (int i = 0; i < n; ++i) {
             int idx = (writeIdx - n + i + kMaxBuf) % kMaxBuf;
-            data[i] = samples[idx];
+            acfScratch[i] = samples[idx];
         }
 
         // Detrend
         int det = currentDetrend();
         if (det >= DETREND_MEAN) {
             double m = 0;
-            for (float x : data) m += x;
+            for (int i = 0; i < n; ++i) m += acfScratch[i];
             m /= n;
-            for (auto& x : data) x -= (float)m;
+            for (int i = 0; i < n; ++i) acfScratch[i] -= (float)m;
         }
         if (det == DETREND_LINEAR) {
             // Mean-zero already; fit slope with x-index centred
             double sumXY = 0, sumXX = 0;
             for (int i = 0; i < n; ++i) {
                 double xi = i - (n - 1) / 2.0;
-                sumXY += xi * data[i];
+                sumXY += xi * acfScratch[i];
                 sumXX += xi * xi;
             }
             float slope = (sumXX > 1e-9) ? (float)(sumXY / sumXX) : 0.f;
-            for (int i = 0; i < n; ++i) data[i] -= slope * (i - (n - 1) / 2.f);
+            for (int i = 0; i < n; ++i) acfScratch[i] -= slope * (i - (n - 1) / 2.f);
         }
 
         // Series variance
         double s2 = 0;
-        for (float x : data) s2 += (double)x * x;
+        for (int i = 0; i < n; ++i) s2 += (double)acfScratch[i] * acfScratch[i];
         s2 /= n;
         seriesVar = (float)s2;
         if (s2 < 1e-12) { acf.fill(0.f); phi = 0.f; residVar = 0.f; isWhite = true; ciBand = 1.96f / std::sqrt((float)n); return; }
@@ -174,7 +178,7 @@ struct Lag : Module {
         if (K > n / 2) K = std::max(1, n / 2);
         for (int k = 1; k <= K; ++k) {
             double acov = 0;
-            for (int t = k; t < n; ++t) acov += (double)data[t] * data[t - k];
+            for (int t = k; t < n; ++t) acov += (double)acfScratch[t] * acfScratch[t - k];
             acov /= n; // biased estimator (standard)
             acf[k - 1] = (float)(acov / s2);
         }
